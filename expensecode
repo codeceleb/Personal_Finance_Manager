@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Personal Finance Manager</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f2f2f2;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      color: #333;
+    }
+
+    #salary-form,
+    #expense-form,
+    #expense-chart-container {
+      background-color: #fff;
+      padding: 20px;
+      border-radius: 5px;
+      margin-bottom: 20px;
+    }
+
+    input[type="text"],
+    input[type="number"] {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      background-color: #4caf50;
+      color: #fff;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    ul {
+      list-style-type: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    li {
+      margin-bottom: 10px;
+    }
+
+    canvas {
+      max-width: 400px;
+      margin: 20px auto;
+    }
+  </style>
+</head>
+<body>
+  <h1>Personal Finance Manager</h1>
+
+  <div id="salary-form">
+    <h2>Set Monthly Salary</h2>
+    <input type="number" id="monthly-salary" placeholder="Enter monthly salary" value="">
+    <button onclick="setMonthlySalary()">Set</button>
+  </div>
+
+  <div id="expense-form">
+    <h2>Add Expense</h2>
+    <input type="number" id="expense-amount" placeholder="Enter amount">
+    <input type="text" id="expense-category" placeholder="Enter category">
+    <button onclick="addExpense()">Add</button>
+  </div>
+
+  <div id="expense-list">
+    <h2>Expense List</h2>
+    <ul id="expenses">
+      <!-- Expense items will be dynamically added here -->
+    </ul>
+  </div>
+
+  <div id="expense-chart-container">
+    <h2>Expense Breakdown</h2>
+    <canvas id="expense-chart"></canvas>
+  </div>
+
+  <div id="debt-alert" style="display: none;">
+    <h2>Debt Alert!</h2>
+    <p>Your expenses have exceeded your monthly salary.</p>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script>
+    let expenses = [];
+    let monthlySalary = 0;
+
+    function setMonthlySalary() {
+      const salaryInput = document.getElementById('monthly-salary');
+      const salary = parseFloat(salaryInput.value);
+
+      if (isNaN(salary) || salary <= 0) {
+        alert('Please enter a valid monthly salary.');
+        return;
+      }
+
+      monthlySalary = salary;
+      salaryInput.value = '';
+
+      updateExpenseChart();
+    }
+
+    function addExpense() {
+      const amountInput = document.getElementById('expense-amount');
+      const categoryInput = document.getElementById('expense-category');
+      const amount = parseFloat(amountInput.value);
+      const category = categoryInput.value;
+
+      if (isNaN(amount) || category.trim() === '') {
+        alert('Please enter a valid amount and category.');
+        return;
+      }
+
+      const expense = {
+        amount: amount,
+        category: category
+      };
+
+      expenses.push(expense);
+
+      amountInput.value = '';
+      categoryInput.value = '';
+
+      updateExpenseList();
+      updateExpenseChart();
+    }
+
+    function updateExpenseList() {
+      const expensesList = document.getElementById('expenses');
+      expensesList.innerHTML = '';
+
+      expenses.forEach((expense) => {
+        const listItem = document.createElement('li');
+        listItem.textContent = `${expense.category}: ₹${expense.amount.toFixed(2)}`;
+        expensesList.appendChild(listItem);
+      });
+    }
+
+    function updateExpenseChart() {
+      const expenseCategories = [];
+      const expenseAmounts = [];
+
+      expenses.forEach((expense) => {
+        if (!expenseCategories.includes(expense.category)) {
+          expenseCategories.push(expense.category);
+          expenseAmounts.push(expense.amount);
+        } else {
+          const index = expenseCategories.indexOf(expense.category);
+          expenseAmounts[index] += expense.amount;
+        }
+      });
+
+      const remainingSalary = monthlySalary - expenses.reduce((total, expense) => total + expense.amount, 0);
+      if (remainingSalary > 0) {
+        expenseCategories.push('Savings');
+        expenseAmounts.push(remainingSalary);
+      } else if (remainingSalary < 0) {
+        document.getElementById('debt-alert').style.display = 'block';
+      } else {
+        document.getElementById('debt-alert').style.display = 'none';
+      }
+
+      const chartData = {
+        labels: expenseCategories,
+        datasets: [{
+          label: 'Expense Amount (in ₹)',
+          data: expenseAmounts,
+          backgroundColor: [
+            '#FF6384', // Red
+            '#36A2EB', // Blue
+            '#FFCE56', // Yellow
+            '#4BC0C0', // Teal
+            '#9966FF', // Purple
+            '#FF9F40'  // Orange
+          ]
+        }]
+      };
+
+      const chartOptions = {
+        plugins: {
+          title: {
+            display: true,
+            text: 'Expense Breakdown',
+            font: {
+              size: 18,
+              weight: 'bold'
+            }
+          }
+        }
+      };
+
+      const expenseChart = document.getElementById('expense-chart').getContext('2d');
+      if (window.expensePieChart) {
+        window.expensePieChart.destroy();
+      }
+      window.expensePieChart = new Chart(expenseChart, {
+        type: 'pie',
+        data: chartData,
+        options: chartOptions
+      });
+    }
+  </script>
+</body>
+</html>
